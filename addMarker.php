@@ -2,6 +2,7 @@
 
 if(isset($_POST["cord"])){
     $cord = $_POST["cord"];
+    $text = $_POST["text"];
     $servername = "localhost";
     $username = "root";
     $password = "";
@@ -14,8 +15,8 @@ if(isset($_POST["cord"])){
 
 
 
-  $stmt = $conn->prepare("INSERT INTO markers (cord1) VALUES (?)");
-  $stmt->bind_param("s", $cord);
+  $stmt = $conn->prepare("INSERT INTO markers (cord1,description) VALUES (?,?)");
+  $stmt->bind_param("ss", $cord,$text);
 
   $stmt->execute();
 

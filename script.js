@@ -1,84 +1,105 @@
-$(document).ready(function(){
-  console.log(array);
-  var m = new SMap(JAK.gel("m"));
-  m.addControl(new SMap.Control.Sync()); /* Aby mapa reagovala na změnu velikosti průhledu */
-  m.addDefaultLayer(SMap.DEF_BASE).enable(); /* Turistický podklad */
-  var mouse = new SMap.Control.Mouse(SMap.MOUSE_PAN | SMap.MOUSE_WHEEL | SMap.MOUSE_ZOOM); /* Ovládání myší */
-  m.addControl(mouse);
+$(document).ready(function () {
 
-  var obrazek = "https://api.mapy.cz/img/api/marker/drop-red.png";
-
-    var znacky = [];
-var souradnice = [];
-
-for (var i = 0;i < array.length;i++) { /* Vyrobit značky */
-    var c = SMap.Coords.fromWGS84(array[i][0]); /* Souřadnice značky, z textového formátu souřadnic */
-    
-    var options = {
-        url:obrazek,
-        title:"Test",
-        anchor: {left:10, bottom: 1}  /* Ukotvení značky za bod uprostřed dole */
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition);
     }
-    
-    var znacka = new SMap.Marker(c, null, options);
-    souradnice.push(c);
-    znacky.push(znacka);
-}
 
+    function showPosition(position) { // init mapy
+        console.log(position.coords.latitude);
+        console.log(position.coords.longitude);
+        var center = SMap.Coords.fromWGS84(position.coords.longitude, position.coords.latitude);
+        var m = new SMap(JAK.gel("m"), center, 15);
+        m.addControl(new SMap.Control.Sync());
+        m.addDefaultLayer(SMap.DEF_BASE).enable();
+        var mouse = new SMap.Control.Mouse(SMap.MOUSE_PAN | SMap.MOUSE_WHEEL | SMap.MOUSE_ZOOM);
+        m.addControl(mouse);
 
-/* Křivoklát ukotvíme za střed značky, přestože neznáme její velikost */
-var options = {
-    anchor: {left:0.5, top:0.5}
-}
-if(znacky.length > 0){
-    znacky[0].decorate(SMap.Marker.Feature.RelativeAnchor, options);
-}
+        var obrazek = "https://api.mapy.cz/img/api/marker/drop-red.png";
 
+        var znacky = [];
+        var souradnice = [];
 
-var vrstva = new SMap.Layer.Marker();     /* Vrstva se značkami */
-m.addLayer(vrstva);                          /* Přidat ji do mapy */
-vrstva.enable();                         /* A povolit */
-for (var i=0;i<znacky.length;i++) {
-    vrstva.addMarker(znacky[i]);
-}
+        for (var i = 0; i < array.length; i++) {
+            var c = SMap.Coords.fromWGS84(array[i][0]);
 
-var cordText = $("#cord");
-function click(e, elm) { /* Došlo ke kliknutí, spočítáme kde */
-    var coords = SMap.Coords.fromEvent(e.data.event, m);
-    cordText.text(coords.toWGS84(2).reverse().join(""));
-}
-m.getSignals().addListener(window, "map-click", click); /* Při signálu kliknutí volat tuto funkci */ 
-
-
-$("#btn").click(function(){
-    var postData = cordText.text();
-    $.ajax({
-        url:"addMarker.php",
-        method:"POST",
-
-        data:{
-          cord: postData,
-        },
-        success:function(response) {
-            var c = SMap.Coords.fromWGS84(postData); /* Souřadnice značky, z textového formátu souřadnic */
             var options = {
-                url:obrazek,
-                title:"Test2",
-                anchor: {left:10, bottom: 1}  /* Ukotvení značky za bod uprostřed dole */
+                url: obrazek,
+                title: array[i][1],
+                anchor: { left: 10, bottom: 1 }
             }
-    
+
             var znacka = new SMap.Marker(c, null, options);
+            var card = new SMap.Card();
+            card.getBody().innerHTML = array[i][1];
+            znacka.decorate(SMap.Marker.Feature.Card, card);
             souradnice.push(c);
+            znacky.push(znacka);
+        }
+
+        var options = {
+            anchor: { left: 0.5, top: 0.5 }
+        }
+        if (znacky.length > 0) {
+            znacky[0].decorate(SMap.Marker.Feature.RelativeAnchor, options);
+        }
+
+        var vrstva = new SMap.Layer.Marker();
+        m.addLayer(vrstva);
+        vrstva.enable();
+        for (var i = 0; i < znacky.length; i++) {
+            vrstva.addMarker(znacky[i]);
+        }
+        var firstClick = false;
+        var cordText = $("#cord");
+        function click(e, elm) { // kliknuti na mapu
+            var coords = SMap.Coords.fromEvent(e.data.event, m);
+            cordText.text(coords.toWGS84(2).reverse().join(""));
+            var znacka = new SMap.Marker(coords, null, options);
+            souradnice.push(c);
+            if (firstClick)
+                vrstva.removeMarker(znacky[znacky.length - 1]);
+            else
+                firstClick = true;
             vrstva.addMarker(znacka);
+            znacky.push(znacka);
 
-        // alert("Ulozeno"+ response);
-       },
-       error:function(){
-        alert("error");
-       }
+        }
 
-      });
-})
+        m.getSignals().addListener(window, "map-click", click);
 
+        $("#btn").click(function () { // ulozeni bodu
+            var postData = cordText.text();
+            $.ajax({
+                url: "addMarker.php",
+                method: "POST",
 
+                data: {
+                    cord: postData,
+                    text: $("#markText").val()
+                },
+                success: function (response) {
+                    var c = SMap.Coords.fromWGS84(postData);
+                    var options = {
+                        url: obrazek,
+                        title: "Test2",
+                        anchor: { left: 10, bottom: 1 }
+                    }
+
+                    var znacka = new SMap.Marker(c, null, options);
+                    var card = new SMap.Card();
+                    card.getBody().innerHTML = postData;
+                    znacka.decorate(SMap.Marker.Feature.Card, card);
+                    vrstva.addMarker(znacka);
+                    souradnice.push(c);
+                    znacky.push(znacka);
+
+                },
+                error: function () {
+                    alert("error");
+                }
+
+            });
+        })
+
+    }
 });

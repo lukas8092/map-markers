@@ -26,7 +26,7 @@ $result = $conn->query($sql);
 if ($result->num_rows > 0) {
   while($row = $result->fetch_assoc()) {
     ?>
-    array.push(["<?php echo str_replace("\"","\\\"",$row["cord1"]);?>"]);
+    array.push(["<?php echo str_replace("\"","\\\"",$row["cord1"]);?>","<?php echo $row["description"]?>"]);
     <?php
   }
 } else {
@@ -40,7 +40,8 @@ $conn->close();
 <body>
     <div id="m" style="height:360px"></div>
     <div>
-        <span id="cord">Klikněte na mapu</span>
+        <span id="cord">Klikněte na mapu</span> <br>
+        <input type="text" value="Zachod" id="markText">
         <button id="btn">Uložit</button>
     </div>
 </body>
